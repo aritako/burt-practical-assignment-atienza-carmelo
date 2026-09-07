@@ -53,6 +53,30 @@ The sample data is historical, so it can be run explicitly with a report date:
 
 The `--report-date` option is useful for rerunning a report, testing a particular export, or processing an older input file. It expects the format `YYYY-MM-DD`.
 
+## Schedule automatic generation
+
+>
+> "Every morning they want two CSV reports generated automatically from the previous day’s exports."
+>
+
+As part of the specs in INSTRUCTIONS.md, we introduce a simple shell script which can be integrated to your system's cron.
+
+`run_daily_report.sh` is a small cron-friendly wrapper. It locates the repository, changes to its directory, and runs the report generator with the project's virtual environment. This matters because cron does not guarantee the same working directory as an interactive shell.
+
+To edit the current user's crontab:
+
+```bash
+crontab -e
+```
+
+For example, to run the job every morning at 06:00 and append its output to a log file:
+
+```cron
+0 6 * * * /absolute/path/to/burt-practical-assignment-atienza-carmelo/run_daily_report.sh >> /absolute/path/to/burt-practical-assignment-atienza-carmelo/reports/cron.log 2>&1
+```
+
+Replace both placeholder paths with the absolute path to this repository. The default run reports yesterday, so the scheduled job does not need a date argument.
+
 ## Report contents
 
 ### Transaction detail
@@ -104,6 +128,7 @@ A compile check can be run separately:
 │   ├── stores.json
 │   └── transactions.json
 ├── reports/
+├── run_daily_report.sh
 ├── sales_report.py
 ├── test_sales_report.py
 └── README.md
