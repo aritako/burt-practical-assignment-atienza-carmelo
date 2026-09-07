@@ -1,6 +1,7 @@
 import json
 import csv
 import datetime
+import argparse
 from pathlib import Path
 
 INPUT_DIR = "data"
@@ -102,20 +103,32 @@ def write_csv_report(output_root, filename, columns, data):
     writer.writeheader()
     writer.writerows(data)
 
+def parse_args():
+  parser = argparse.ArgumentParser(description="Generate daily sales reports.")
+  parser.add_argument(
+    "--report-date",
+    type=datetime.date.fromisoformat,
+    default=datetime.date.today() - datetime.timedelta(days=1),
+    help="Date to report in YYYY-MM-DD format (defaults to yesterday).",
+  )
+  return parser.parse_args()
+
 def main():
+  args = parse_args()
   data_root = Path(INPUT_DIR)
   output_root = Path(OUTPUT_DIR)
 
   output_root.mkdir(parents=True, exist_ok=True)
 
-  transactions = load(data_root / "transactions.json")
+  raw_transactions = load(data_root / "transactions.json")
   stores = load(data_root / "stores.json")
+  report_date = args.report_date.isoformat()
+  transactions = list(filter(lambda txn: txn.get("date") == report_date, raw_transactions))
 
   detail_report = generate_transaction_detail_report(transactions, stores)
   summary_report = generate_store_summary_report(transactions, stores)
-  date_str = datetime.datetime.now().strftime("%Y-%m-%d")
-  write_csv_report(output_root, f"{date_str}_transaction_detail_report.csv", DETAIL_COLUMNS, detail_report)
-  write_csv_report(output_root, f"{date_str}_summary_report.csv", SUMMARY_COLUMNS, summary_report)
+  write_csv_report(output_root, f"{report_date}_transaction_detail_report.csv", DETAIL_COLUMNS, detail_report)
+  write_csv_report(output_root, f"{report_date}_summary_report.csv", SUMMARY_COLUMNS, summary_report)
 
 
 if __name__ == "__main__":
