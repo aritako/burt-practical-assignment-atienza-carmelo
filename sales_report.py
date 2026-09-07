@@ -57,7 +57,7 @@ def clean_revenue(revenue):
     try:
       return float(revenue)
     except ValueError:
-      return 0.0
+      return "N/A"
   elif isinstance(revenue, (int, float)):
     return float(revenue)
   else:

@@ -21,7 +21,7 @@ class SalesReportTests(unittest.TestCase):
     self.assertEqual(sales_report.clean_revenue("$1,234.50"), 1234.5)
     self.assertEqual(sales_report.clean_revenue(12), 12.0)
     self.assertEqual(sales_report.clean_revenue(None), "N/A")
-    self.assertEqual(sales_report.clean_revenue("invalid"), 0.0)
+    self.assertEqual(sales_report.clean_revenue("invalid"), "N/A")
 
   def test_load_rejects_invalid_json(self):
     with tempfile.TemporaryDirectory() as temporary_directory:
