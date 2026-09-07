@@ -30,21 +30,41 @@ def load(file_path: str):
 
   return payload
 
-def join_by_stores(transactions, stores):
-  store_map = {store["shop_id"]: store for store in stores}
+def clean_revenue(revenue):
+  if isinstance(revenue, str):
+    revenue = revenue.replace("$", "").replace(",", "")
+    try:
+      return float(revenue)
+    except ValueError:
+      return 0.0
+  elif isinstance(revenue, (int, float)):
+    return float(revenue)
+  else:
+    return 0.0
 
-  for transaction in transactions:
-    shop_id = transaction["shop_id"]
-    store = store_map.get(shop_id, {})
-    transaction["shop_name"] = store.get("name", "")
-    transaction["shop_city"] = store.get("city", "")
-    transaction.pop("shop_id", None)
-
-  return transactions
+def build_transaction_row(transaction, store_map):
+  return {
+    "date": transaction.get("date", ""),
+    "country": transaction.get("country", ""),
+    "channel": transaction.get("channel", ""),
+    "category": transaction.get("category", ""),
+    "shop_name": store_map.get(transaction.get("shop_id"), {}).get("name", "N/A"),
+    "shop_city": store_map.get(transaction.get("shop_id"), {}).get("city", "N/A"),
+    "units_sold": transaction.get("units_sold", 0),
+    "revenue": clean_revenue(transaction.get("revenue", 0.0)),
+    "transactions": transaction.get("transactions", "N/A"),
+  }
 
 def generate_transaction_detail_report(transactions, stores):
-  joined_transactions = join_by_stores(transactions, stores)
-  print(joined_transactions[:5])
+  store_map = {store["shop_id"]: store for store in stores}
+
+  normalized_transactions = []
+
+  for transaction in transactions:
+    transaction_row = build_transaction_row(transaction, store_map)
+    normalized_transactions.append(transaction_row)
+
+  return normalized_transactions
 
 def main():
   data_root = Path(INPUT_DIR)
@@ -55,7 +75,8 @@ def main():
   transactions = load(data_root / "transactions.json")
   stores = load(data_root / "stores.json")
 
-  generate_transaction_detail_report(transactions, stores)
+  detail_report = generate_transaction_detail_report(transactions, stores)
+
 
 if __name__ == "__main__":
   main()
