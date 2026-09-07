@@ -103,6 +103,7 @@ Transactions are filtered by date before either report is built, so the detail a
 - Revenue values may be numeric or strings such as `$1,234.50`; currency symbols and thousands separators are removed before writing the CSV.
 - A transaction whose `shop_id` is absent from `stores.json` is retained. Its `shop_name` and `shop_city` are written as `N/A` rather than dropping the sale.
 - Missing transaction fields use the fallback values defined by the report generator.
+- Invalid JSON, malformed record collections, missing store IDs, and report dates with no transactions cause the command to fail with an error.
 
 ## Tests
 

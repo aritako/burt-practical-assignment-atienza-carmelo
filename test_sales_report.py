@@ -1,4 +1,5 @@
 import datetime
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -19,8 +20,30 @@ class SalesReportTests(unittest.TestCase):
   def test_clean_revenue_supports_currency_formats(self):
     self.assertEqual(sales_report.clean_revenue("$1,234.50"), 1234.5)
     self.assertEqual(sales_report.clean_revenue(12), 12.0)
-    self.assertEqual(sales_report.clean_revenue(None), 0.0)
+    self.assertEqual(sales_report.clean_revenue(None), "N/A")
     self.assertEqual(sales_report.clean_revenue("invalid"), 0.0)
+
+  def test_load_rejects_invalid_json(self):
+    with tempfile.TemporaryDirectory() as temporary_directory:
+      file_path = Path(temporary_directory) / "invalid.json"
+      file_path.write_text("not json", encoding="utf-8")
+
+      with self.assertRaisesRegex(ValueError, "Invalid JSON"):
+        sales_report.load(file_path)
+
+  def test_main_rejects_malformed_records(self):
+    with patch("sales_report.parse_args") as mock_parse_args:
+      mock_parse_args.return_value.report_date = datetime.date(2024, 3, 1)
+      with patch("sales_report.load", side_effect=[["invalid"], self.stores]):
+        with self.assertRaisesRegex(ValueError, "every transaction"):
+          sales_report.main()
+
+  def test_main_rejects_report_date_without_transactions(self):
+    with patch("sales_report.parse_args") as mock_parse_args:
+      mock_parse_args.return_value.report_date = datetime.date(2099, 1, 1)
+      with patch("sales_report.load", side_effect=[self.transactions, self.stores]):
+        with self.assertRaisesRegex(ValueError, "No transactions found"):
+          sales_report.main()
 
   def test_detail_report_preserves_unknown_shop_and_missing_country(self):
     transaction = dict(next(
