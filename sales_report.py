@@ -1,4 +1,6 @@
 import json
+import csv
+import datetime
 from pathlib import Path
 
 INPUT_DIR = "data"
@@ -42,12 +44,17 @@ def clean_revenue(revenue):
   else:
     return 0.0
 
+def clean_country(country):
+  if not country or not isinstance(country, str):
+    return "N/A"
+  return country.strip().upper()
+
 def build_transaction_row(transaction, store_map):
   return {
-    "date": transaction.get("date", ""),
-    "country": transaction.get("country", ""),
-    "channel": transaction.get("channel", ""),
-    "category": transaction.get("category", ""),
+    "date": transaction.get("date", "N/A"),
+    "country": clean_country(transaction.get("country", "N/A")),
+    "channel": transaction.get("channel", "N/A"),
+    "category": transaction.get("category", "N/A"),
     "shop_name": store_map.get(transaction.get("shop_id"), {}).get("name", "N/A"),
     "shop_city": store_map.get(transaction.get("shop_id"), {}).get("city", "N/A"),
     "units_sold": transaction.get("units_sold", 0),
@@ -66,6 +73,35 @@ def generate_transaction_detail_report(transactions, stores):
 
   return normalized_transactions
 
+def generate_store_summary_report(transactions, stores):
+  store_map = {store["shop_id"]: store for store in stores}
+  summary_report = {}
+
+  for transaction in transactions:
+    shop_id = transaction.get("shop_id")
+    if shop_id not in summary_report:
+      summary_report[shop_id] = {
+        "shop_name": store_map.get(shop_id, {}).get("name", "N/A"),
+        "shop_city": store_map.get(shop_id, {}).get("city", "N/A"),
+        "total_units_sold": 0,
+        "total_revenue": 0.0,
+        "total_transactions": 0,
+      }
+
+    summary_report[shop_id]["total_units_sold"] += transaction.get("units_sold", 0)
+    summary_report[shop_id]["total_revenue"] += clean_revenue(transaction.get("revenue", 0.0))
+    summary_report[shop_id]["total_transactions"] += transaction.get("transactions", 0)
+
+  return list(summary_report.values())
+
+def write_csv_report(output_root, filename, columns, data):
+  path = output_root / filename
+
+  with path.open("w", encoding="utf-8", newline="") as handle:
+    writer = csv.DictWriter(handle, fieldnames=columns)
+    writer.writeheader()
+    writer.writerows(data)
+
 def main():
   data_root = Path(INPUT_DIR)
   output_root = Path(OUTPUT_DIR)
@@ -76,6 +112,10 @@ def main():
   stores = load(data_root / "stores.json")
 
   detail_report = generate_transaction_detail_report(transactions, stores)
+  summary_report = generate_store_summary_report(transactions, stores)
+  date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+  write_csv_report(output_root, f"{date_str}_transaction_detail_report.csv", DETAIL_COLUMNS, detail_report)
+  write_csv_report(output_root, f"{date_str}_summary_report.csv", SUMMARY_COLUMNS, summary_report)
 
 
 if __name__ == "__main__":
